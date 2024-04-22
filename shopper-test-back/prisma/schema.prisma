@@ -1,0 +1,30 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Product {
+  code        BigInt    @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  costPrice   Float     @map("cost_price")
+  salesPrice  Float     @map("sales_price")
+  packs       Pack[]    @relation("packs")
+  components  Pack[]    @relation("components") 
+
+  @@map("products") 
+}
+
+model Pack {
+  id         BigInt   @id @default(autoincrement())
+  packId     BigInt   @map("pack_id")
+  productId  BigInt   @map("product_id")
+  qty        BigInt
+  pack       Product  @relation("packs", fields: [packId], references: [code])
+  product    Product  @relation("components", fields: [productId], references: [code])
+
+  @@map("packs")
+}

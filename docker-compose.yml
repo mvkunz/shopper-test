@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  app-backend:
+    container_name: nestjs_app
+    build:
+      context: ./shopper-test-back
+      dockerfile: Dockerfile
+    volumes:
+      - ./shopper-test-back:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_HOST=db
+      - DATABASE_USER=root
+      - DATABASE_PASSWORD=secret
+      - DATABASE_NAME=testdb
+    command: /bin/bash -c "dockerize -wait tcp://db:3306 -timeout 180s && npm install && npx prisma generate && npx prisma migrate deploy && npx prisma db seed && npm run start:dev"
+    networks:
+      - shopper-network
+
+  app-frontend:
+    container_name: react_app
+    build:
+      context: ./shopper-test-front
+      dockerfile: Dockerfile
+    depends_on:
+      - app-backend
+    volumes:
+      - ./shopper-test-front:/usr/src/app
+      - /usr/src/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - CHOKIDAR_USEPOLLING=true # Needed for hot-reloading
+    command: npm run dev
+    networks:
+      - shopper-network
+
+  db:
+    container_name: mysql_db
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: secret
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - shopper-network
+
+networks:
+  shopper-network:
+    driver: bridge
+
+volumes:
+  db-data:
